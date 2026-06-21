@@ -1,0 +1,22 @@
+
+# Virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Hugging Face model cache (downloaded models)
+.cache/
+
+# Environment variables / secrets
+.env
+
+# IDE / editor settings
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
