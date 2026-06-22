@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Chatbot 🤖</title>
+  <style>
+    /* ===== Theme variables (light & dark) ===== */
+    :root[data-theme="dark"] {
+      --bg1:#0f172a; --bg2:#1e3a8a; --bg3:#312e81;
+      --panel:rgba(30,41,59,0.85); --border:rgba(255,255,255,0.10);
+      --header:rgba(51,65,85,0.6); --text:#f1f5f9; --muted:#94a3b8;
+      --user:#2563eb; --user-hover:#1d4ed8; --bot:#334155; --input:#1e293b;
+      --chip:rgba(255,255,255,0.06);
+    }
+    :root[data-theme="light"] {
+      --bg1:#e0e7ff; --bg2:#c7d2fe; --bg3:#ddd6fe;
+      --panel:rgba(255,255,255,0.85); --border:rgba(0,0,0,0.08);
+      --header:rgba(255,255,255,0.7); --text:#1e293b; --muted:#64748b;
+      --user:#2563eb; --user-hover:#1d4ed8; --bot:#e2e8f0; --input:#f1f5f9;
+      --chip:rgba(0,0,0,0.04);
+    }
+
+    * { box-sizing:border-box; margin:0; padding:0; }
+
+    body {
+      font-family:'Segoe UI', system-ui, sans-serif;
+      background:linear-gradient(-45deg, var(--bg1), var(--bg2), var(--bg3), var(--bg1));
+      background-size:400% 400%;
+      animation:gradientShift 18s ease infinite;
+      display:flex; justify-content:center; align-items:center;
+      height:100vh; transition:background 0.4s;
+    }
+    @keyframes gradientShift {
+      0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%}
+    }
+
+    .chat-container {
+      width:460px; max-width:95vw; height:660px;
+      background:var(--panel); backdrop-filter:blur(14px);
+      border:1px solid var(--border); border-radius:22px;
+      display:flex; flex-direction:column; overflow:hidden;
+      box-shadow:0 24px 70px rgba(0,0,0,0.45);
+    }
+
+    .chat-header {
+      background:var(--header); color:var(--text);
+      padding:14px 18px; display:flex; align-items:center; justify-content:space-between;
+      border-bottom:1px solid var(--border);
+    }
+    .chat-header .title { display:flex; align-items:center; gap:10px; font-weight:600; font-size:16px; }
+    .subtitle { font-size:11px; color:var(--muted); font-weight:400; }
+    .status-dot {
+      width:10px; height:10px; border-radius:50%; background:#22c55e;
+      box-shadow:0 0 8px #22c55e; animation:pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .header-actions { display:flex; gap:6px; }
+    .icon-btn {
+      background:transparent; border:none; color:var(--muted);
+      cursor:pointer; font-size:17px; padding:6px; border-radius:8px;
+      transition:background 0.2s, color 0.2s;
+    }
+    .icon-btn:hover { background:var(--chip); color:var(--text); }
+
+    .chat-messages {
+      flex:1; padding:18px; overflow-y:auto;
+      display:flex; flex-direction:column; gap:14px;
+    }
+    .chat-messages::-webkit-scrollbar { width:6px; }
+    .chat-messages::-webkit-scrollbar-thumb { background:var(--muted); border-radius:3px; }
+
+    .row { display:flex; align-items:flex-end; gap:8px; max-width:85%; }
+    .row.user { align-self:flex-end; flex-direction:row-reverse; }
+    .row.bot  { align-self:flex-start; }
+
+    .avatar {
+      width:34px; height:34px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:17px; flex-shrink:0;
+    }
+    .avatar.user { background:var(--user); }
+    .avatar.bot  { background:var(--bot); }
+
+    .bubble-wrap { display:flex; flex-direction:column; }
+    .message {
+      padding:11px 15px; border-radius:16px; line-height:1.45;
+      font-size:14px; word-wrap:break-word; animation:fadeInUp 0.3s ease;
+    }
+    @keyframes fadeInUp { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:translateY(0)} }
+    .row.user .message { background:var(--user); color:#fff; border-bottom-right-radius:4px; }
+    .row.bot  .message { background:var(--bot); color:var(--text); border-bottom-left-radius:4px; }
+    .timestamp { font-size:10px; color:var(--muted); margin-top:4px; padding:0 6px; }
+    .row.user .timestamp { text-align:right; }
+
+    /* typing dots */
+    .typing { display:flex; gap:4px; padding:6px 2px; }
+    .typing span { width:8px; height:8px; border-radius:50%; background:var(--muted); animation:bounce 1.3s infinite; }
+    .typing span:nth-child(2){ animation-delay:0.2s } .typing span:nth-child(3){ animation-delay:0.4s }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0); opacity:0.5} 30%{transform:translateY(-6px); opacity:1} }
+
+    /* suggested prompt chips */
+    .chips { display:flex; flex-wrap:wrap; gap:8px; padding:0 18px 12px; }
+    .chip {
+      background:var(--chip); color:var(--text); border:1px solid var(--border);
+      padding:8px 14px; border-radius:18px; font-size:13px; cursor:pointer;
+      transition:transform 0.1s, background 0.2s;
+    }
+    .chip:hover { background:var(--user); color:#fff; transform:translateY(-2px); }
+
+    .chat-input {
+      display:flex; padding:12px; gap:8px;
+      background:var(--header); border-top:1px solid var(--border);
+    }
+    .chat-input input {
+      flex:1; padding:12px 16px; border:1px solid transparent; border-radius:24px;
+      outline:none; font-size:14px; background:var(--input); color:var(--text);
+      transition:border 0.2s;
+    }
+    .chat-input input:focus { border-color:var(--user); }
+    .chat-input button {
+      padding:0 22px; border:none; border-radius:24px; background:var(--user);
+      color:#fff; cursor:pointer; font-weight:600;
+      transition:background 0.2s, transform 0.1s;
+    }
+    .chat-input button:hover:not(:disabled){ background:var(--user-hover); }
+    .chat-input button:active:not(:disabled){ transform:scale(0.95); }
+    .chat-input button:disabled { opacity:0.5; cursor:not-allowed; }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <div class="title">
+        <span class="status-dot"></span>
+        <div>
+          AI Chatbot 🤖
+          <div class="subtitle">DialoGPT • online</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="soundBtn" title="Toggle sound">🔊</button>
+        <button class="icon-btn" id="themeBtn" title="Toggle theme">🌙</button>
+        <button class="icon-btn" id="clearBtn" title="Clear chat">🗑️</button>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="messages"></div>
+    <div class="chips" id="chips"></div>
+
+    <div class="chat-input">
+      <input type="text" id="userInput" placeholder="Type a message..." autocomplete="off" />
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+
+  <script>
+    // ====== Element references ======
+    const messagesDiv = document.getElementById("messages");
+    const chipsDiv = document.getElementById("chips");
+    const input = document.getElementById("userInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const themeBtn = document.getElementById("themeBtn");
+    const soundBtn = document.getElementById("soundBtn");
+
+    // ====== State (persisted in the browser via localStorage) ======
+    let history = JSON.parse(localStorage.getItem("chat_history") || "[]");
+    let soundOn = localStorage.getItem("chat_sound") !== "off";
+
+    const SUGGESTIONS = ["Hello! 👋", "How are you?", "Tell me a joke", "What do you like to do?"];
+
+    function persist() { localStorage.setItem("chat_history", JSON.stringify(history)); }
+    function nowTime() { return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); }
+
+    // ====== Sound (generated in-browser, no files needed) ======
+    let audioCtx = null;
+    function beep(freq) {
+      if (!soundOn) return;
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = freq;
+        osc.type = "sine";
+        gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+      } catch (e) {}
+    }
+
+    // ====== Rendering ======
+    function renderMessage(text, sender, time) {
+      const row = document.createElement("div");
+      row.className = "row " + sender;
+
+      const avatar = document.createElement("div");
+      avatar.className = "avatar " + sender;
+      avatar.textContent = sender === "user" ? "🧑" : "🤖";
+
+      const wrap = document.createElement("div");
+      wrap.className = "bubble-wrap";
+      const bubble = document.createElement("div");
+      bubble.className = "message";
+      bubble.textContent = text;
+      const ts = document.createElement("div");
+      ts.className = "timestamp";
+      ts.textContent = time;
+
+      wrap.appendChild(bubble); wrap.appendChild(ts);
+      row.appendChild(avatar); row.appendChild(wrap);
+      messagesDiv.appendChild(row);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function renderAll() {
+      messagesDiv.innerHTML = "";
+      history.forEach(m => renderMessage(m.text, m.sender, m.time));
+      toggleChips();
+    }
+
+    // show suggestion chips only when the conversation is empty
+    function toggleChips() {
+      chipsDiv.innerHTML = "";
+      if (history.length === 0) {
+        SUGGESTIONS.forEach(s => {
+          const chip = document.createElement("div");
+          chip.className = "chip";
+          chip.textContent = s;
+          chip.onclick = () => { input.value = s; sendMessage(); };
+          chipsDiv.appendChild(chip);
+        });
+      }
+    }
+
+    function pushMessage(text, sender) {
+      const time = nowTime();
+      history.push({ text, sender, time });
+      persist();
+      renderMessage(text, sender, time);
+      toggleChips();
+    }
+
+    function addTyping() {
+      const row = document.createElement("div");
+      row.className = "row bot";
+      row.innerHTML = `<div class="avatar bot">🤖</div>
+        <div class="message"><div class="typing"><span></span><span></span><span></span></div></div>`;
+      messagesDiv.appendChild(row);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      return row;
+    }
+
+    // ====== Core: send a message to the FastAPI /chat endpoint ======
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+
+      pushMessage(text, "user");
+      beep(600);                 // send sound (higher pitch)
+      input.value = "";
+      sendBtn.disabled = true;
+      const typingRow = addTyping();
+
+      try {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text })
+        });
+        if (!response.ok) throw new Error("Server returned " + response.status);
+        const data = await response.json();
+        typingRow.remove();
+        pushMessage(data.reply, "bot");
+        beep(400);               // receive sound (lower pitch)
+      } catch (err) {
+        typingRow.remove();
+        pushMessage("⚠️ Sorry, I couldn't reach the server.", "bot");
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+
+    // ====== Controls ======
+    function clearChat() {
+      history = [];
+      persist();
+      renderAll();
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      themeBtn.textContent = theme === "dark" ? "🌙" : "☀️";
+      localStorage.setItem("chat_theme", theme);
+    }
+
+    themeBtn.onclick = () => {
+      const current = document.documentElement.getAttribute("data-theme");
+      applyTheme(current === "dark" ? "light" : "dark");
+    };
+
+    soundBtn.onclick = () => {
+      soundOn = !soundOn;
+      localStorage.setItem("chat_sound", soundOn ? "on" : "off");
+      soundBtn.textContent = soundOn ? "🔊" : "🔇";
+    };
+
+    sendBtn.addEventListener("click", sendMessage);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
+    clearBtn.addEventListener("click", clearChat);
+
+    // ====== Init ======
+    applyTheme(localStorage.getItem("chat_theme") || "dark");
+    soundBtn.textContent = soundOn ? "🔊" : "🔇";
+    renderAll();
+    input.focus();
+  </script>
+</body>
+</html>

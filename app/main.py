@@ -33,38 +33,79 @@
 
 # app/main.py
 
+# from contextlib import asynccontextmanager
+# from fastapi import FastAPI
+
+# from app.routers import chat
+# from app.models.chatbot import load_model
+
+
+# # A "lifespan" function runs setup code BEFORE the app starts serving,
+# # and (optionally) cleanup code AFTER it shuts down.
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     # --- startup: runs once when the server starts ---
+#     load_model()
+#     yield            # the app runs while "paused" here
+#     # --- shutdown: code after yield runs when server stops (none needed yet) ---
+
+
+# # Attach the lifespan to our app so load_model() runs on startup.
+# app = FastAPI(title="AI Chatbot API", lifespan=lifespan)
+
+
+# @app.get("/")
+# def root():
+#     return {"message": "Chatbot API is running!"}
+
+
+# app.include_router(chat.router)
+
+
+# # 🟡 Q2 — Purpose & timing of lifespan
+# # "lifespan helps in starting the model once for multiple use without loading again and again" → ✅ Correct! That's the purpose nailed.
+
+# # "the code before yield runs when we hit an api request" → 🔴 Not quite.
+
+# # The code before yield runs once, at server startup — before any request arrives. Not per-request!
+
+
+
+
+# app/main.py
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles      # NEW: to serve static files (CSS/JS/images)
+from fastapi.responses import FileResponse       # NEW: to return our HTML file
 
 from app.routers import chat
 from app.models.chatbot import load_model
 
 
-# A "lifespan" function runs setup code BEFORE the app starts serving,
-# and (optionally) cleanup code AFTER it shuts down.
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # --- startup: runs once when the server starts ---
     load_model()
-    yield            # the app runs while "paused" here
-    # --- shutdown: code after yield runs when server stops (none needed yet) ---
+    yield
 
 
-# Attach the lifespan to our app so load_model() runs on startup.
 app = FastAPI(title="AI Chatbot API", lifespan=lifespan)
 
+# Mount the "static" folder so files in it are reachable (e.g. for future CSS/JS/images).
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
+# Serve the chat UI at the root URL "/".
+# FileResponse sends back our index.html file to the browser.
 @app.get("/")
-def root():
+def serve_frontend():
+    return FileResponse("static/index.html")
+
+
+# Moved the old health-check to /health (so "/" can show the chat page instead).
+@app.get("/health")
+def health():
     return {"message": "Chatbot API is running!"}
 
 
 app.include_router(chat.router)
-
-
-# 🟡 Q2 — Purpose & timing of lifespan
-# "lifespan helps in starting the model once for multiple use without loading again and again" → ✅ Correct! That's the purpose nailed.
-
-# "the code before yield runs when we hit an api request" → 🔴 Not quite.
-
-# The code before yield runs once, at server startup — before any request arrives. Not per-request!

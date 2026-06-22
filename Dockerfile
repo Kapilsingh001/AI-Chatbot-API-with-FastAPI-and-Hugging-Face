@@ -17,6 +17,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Now copy the rest of our application code into the container.
 COPY ./app ./app
 
+# Copy the frontend (static/index.html) so the chat UI is available inside the container.
+COPY ./static ./static
+
 # Tell Docker the container will listen on port 8000.
 EXPOSE 8000
 
